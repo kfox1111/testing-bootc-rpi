@@ -13,6 +13,6 @@ permissions:
   
 jobs:
   build:
-    uses: kfox1111/container-build-and-refresh-action/.github/workflows/containers.yml@main
+    uses: kfox1111/github-workflow-container-lifecycle/.github/workflows/containers.yml@v1
     with:
       platforms: linux/arm64
