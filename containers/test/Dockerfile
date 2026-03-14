@@ -1,4 +1,4 @@
-FROM quay.io/almalinuxorg/almalinux-bootc-rpi:10
+FROM quay.io/almalinuxorg/almalinux:10
 
 RUN \
   dnf install -y git rpm-build patch make gcc && \
