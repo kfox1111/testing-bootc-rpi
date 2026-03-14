@@ -8,6 +8,7 @@ RUN \
   git checkout a10 && \
   cd SPECS && \
   dnf builddep -y raspberrypi2.spec && \
+  spectool -g -R  raspberrypi2.spec && \
   rpmbuild  -bp raspberrypi2.spec && \
   pwd && \
   ls -l
