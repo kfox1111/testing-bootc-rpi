@@ -1,7 +1,7 @@
 FROM quay.io/almalinuxorg/almalinux-bootc-rpi:10
 
 RUN \
-  dnf install -y git rpmbuild && \
+  dnf install -y git rpm-build patch make gcc && \
   cd /tmp && \
   git clone https://git.almalinux.org/rpms/raspberrypi2.git && \
   git checkout a10 && \
