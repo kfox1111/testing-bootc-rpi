@@ -10,7 +10,7 @@ RUN \
   dnf builddep -y raspberrypi2.spec && \
   spectool -g -R  raspberrypi2.spec && \
   mkdir -p ~/SOURCES && \
-  cp -f -a ../SOURCES/* ~/SOURCES/ &&
+  cp -f -a ../SOURCES/* ~/SOURCES/ && \
   rpmbuild  -bp raspberrypi2.spec && \
   pwd && \
   ls -l
