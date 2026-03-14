@@ -7,6 +7,9 @@ RUN \
   cd raspberrypi2 && \
   git checkout a10 && \
   cd SPECS && \
-  rpmbuild  -bp raspberrypi2.spec
+  rpmbuild  -bp raspberrypi2.spec && \
+  pwd && \
+  ls -l
 
+RUN exit 1
 FROM quay.io/almalinuxorg/almalinux-bootc-rpi:10
