@@ -1,3 +1,10 @@
 FROM quay.io/almalinuxorg/almalinux-bootc-rpi:10
 
-RUN dnf install -y ipmitool tcpdump
+RUN
+  dnf install -y git && \
+  cd /tmp && \
+  git clone https://git.almalinux.org/rpms/raspberrypi2.git && \
+  git checkout a10 && \
+  cd SPECS && \
+  rpmbuild  -bp raspberrypi2.spec
+
