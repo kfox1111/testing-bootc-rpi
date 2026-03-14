@@ -12,4 +12,4 @@ RUN \
   ls -l
 
 RUN exit 1
-FROM quay.io/almalinuxorg/almalinux-bootc-rpi:10
+#FROM quay.io/almalinuxorg/almalinux-bootc-rpi:10
