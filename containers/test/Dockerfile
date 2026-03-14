@@ -1,12 +1,13 @@
 FROM quay.io/almalinuxorg/almalinux:10
 
 RUN \
-  dnf install -y git rpm-build patch make gcc && \
+  dnf install -y git rpm-build patch make gcc dnf-plugins-core && \
   cd /tmp && \
   git clone https://git.almalinux.org/rpms/raspberrypi2.git && \
   cd raspberrypi2 && \
   git checkout a10 && \
   cd SPECS && \
+  dnf builddep raspberrypi2.spec && \
   rpmbuild  -bp raspberrypi2.spec && \
   pwd && \
   ls -l
