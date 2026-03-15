@@ -19,5 +19,4 @@ RUN \
   patch -p0 < /tmp/spec.patch && \
   rpmbuild  -ba raspberrypi2.spec
 
-RUN exit 1
 #FROM quay.io/almalinuxorg/almalinux-bootc-rpi:10
