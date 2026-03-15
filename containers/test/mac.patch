@@ -1,27 +1,24 @@
-diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/bcmsdh.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/bcmsdh.c
-index 6a3f187320fc4..13952dfeb3e30 100644
---- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/bcmsdh.c
-+++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/bcmsdh.c
-@@ -951,11 +951,10 @@ int brcmf_sdiod_probe(struct brcmf_sdio_dev *sdiodev)
+diff -ruN linux-stable_20250916.orig/drivers/net/wireless/broadcom/brcm80211/brcmfmac/bcmsdh.c linux-stable_20250916/drivers/net/wireless/broadcom/brcm80211/brcmfmac/bcmsdh.c
+--- linux-stable_20250916.orig/drivers/net/wireless/broadcom/brcm80211/brcmfmac/bcmsdh.c	2025-09-15 04:44:44.000000000 -0700
++++ linux-stable_20250916/drivers/net/wireless/broadcom/brcm80211/brcmfmac/bcmsdh.c	2026-03-15 07:24:51.554557897 -0700
+@@ -946,11 +946,9 @@
  		goto out;
  
  	/* try to attach to the target device */
 -	sdiodev->bus = brcmf_sdio_probe(sdiodev);
--	if (IS_ERR(sdiodev->bus)) {
--		ret = PTR_ERR(sdiodev->bus);
+-	if (!sdiodev->bus) {
+-		ret = -ENODEV;
 +	ret = brcmf_sdio_probe(sdiodev);
 +	if (ret)
  		goto out;
 -	}
-+
  	brcmf_sdiod_host_fixup(sdiodev->func2->card->host);
  out:
  	if (ret)
-diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/sdio.c b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/sdio.c
-index 8cf9d7e7c3f70..4e6ed02c15913 100644
---- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/sdio.c
-+++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/sdio.c
-@@ -4445,7 +4445,7 @@ brcmf_sdio_prepare_fw_request(struct brcmf_sdio *bus)
+diff -ruN linux-stable_20250916.orig/drivers/net/wireless/broadcom/brcm80211/brcmfmac/sdio.c linux-stable_20250916/drivers/net/wireless/broadcom/brcm80211/brcmfmac/sdio.c
+--- linux-stable_20250916.orig/drivers/net/wireless/broadcom/brcm80211/brcmfmac/sdio.c	2025-09-15 04:44:44.000000000 -0700
++++ linux-stable_20250916/drivers/net/wireless/broadcom/brcm80211/brcmfmac/sdio.c	2026-03-15 07:26:40.281929399 -0700
+@@ -4652,7 +4652,7 @@
  	return fwreq;
  }
  
@@ -30,7 +27,7 @@ index 8cf9d7e7c3f70..4e6ed02c15913 100644
  {
  	int ret;
  	struct brcmf_sdio *bus;
-@@ -4551,11 +4551,12 @@ struct brcmf_sdio *brcmf_sdio_probe(struct brcmf_sdio_dev *sdiodev)
+@@ -4754,11 +4754,12 @@
  		goto fail;
  	}
  
@@ -39,17 +36,16 @@ index 8cf9d7e7c3f70..4e6ed02c15913 100644
  
  fail:
  	brcmf_sdio_remove(bus);
--	return ERR_PTR(ret);
+-	return NULL;
 +	sdiodev->bus = NULL;
 +	return ret;
  }
  
  /* Detach and free everything */
-diff --git a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/sdio.h b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/sdio.h
-index 0d18ed15b4032..80180d5c6c879 100644
---- a/drivers/net/wireless/broadcom/brcm80211/brcmfmac/sdio.h
-+++ b/drivers/net/wireless/broadcom/brcm80211/brcmfmac/sdio.h
-@@ -358,7 +358,7 @@ void brcmf_sdiod_freezer_uncount(struct brcmf_sdio_dev *sdiodev);
+diff -ruN linux-stable_20250916.orig/drivers/net/wireless/broadcom/brcm80211/brcmfmac/sdio.h linux-stable_20250916/drivers/net/wireless/broadcom/brcm80211/brcmfmac/sdio.h
+--- linux-stable_20250916.orig/drivers/net/wireless/broadcom/brcm80211/brcmfmac/sdio.h	2025-09-15 04:44:44.000000000 -0700
++++ linux-stable_20250916/drivers/net/wireless/broadcom/brcm80211/brcmfmac/sdio.h	2026-03-15 07:21:49.075612710 -0700
+@@ -389,7 +389,7 @@
  int brcmf_sdiod_probe(struct brcmf_sdio_dev *sdiodev);
  int brcmf_sdiod_remove(struct brcmf_sdio_dev *sdiodev);
  
@@ -58,5 +54,3 @@ index 0d18ed15b4032..80180d5c6c879 100644
  void brcmf_sdio_remove(struct brcmf_sdio *bus);
  void brcmf_sdio_isr(struct brcmf_sdio *bus, bool in_isr);
  
--- 
-2.51.0
