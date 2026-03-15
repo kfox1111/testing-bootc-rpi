@@ -17,7 +17,7 @@ RUN \
   rpmbuild  -bp raspberrypi2.spec && \
   pwd && \
   ls -l ~/rpmbuild/BUILD && \
-  cd ~/rpmbuild/BUILD/*/ && \
+  cd ~/rpmbuild/BUILD/linux-stable_20250916/ && \
   patch -p1 < /tmp/mac.patch
 
 RUN exit 1
