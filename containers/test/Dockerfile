@@ -1,5 +1,7 @@
 FROM quay.io/almalinuxorg/almalinux:10
 
+COPY mac.patch /tmp/mac.patch
+
 RUN \
   set -x && \
   dnf install -y git rpm-build patch make gcc dnf-plugins-core rpmdevtools && \
@@ -14,7 +16,9 @@ RUN \
   cp -f -a ../SOURCES/* ~/rpmbuild/SOURCES/ && \
   rpmbuild  -bp raspberrypi2.spec && \
   pwd && \
-  ls -l ~/rpmbuild/BUILDROOT
+  ls -l ~/rpmbuild/BUILD && \
+  cd ~/rpmbuild/BUILD/*/ && \
+  patch -p1 < /tmp/mac.patch
 
 RUN exit 1
 #FROM quay.io/almalinuxorg/almalinux-bootc-rpi:10
