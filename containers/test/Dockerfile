@@ -1,6 +1,7 @@
 FROM quay.io/almalinuxorg/almalinux:10
 
 COPY mac.patch /tmp/mac.patch
+COPY spec.patch /tmp/spec.patch
 
 RUN \
   set -x && \
@@ -14,11 +15,9 @@ RUN \
   spectool -g -R  raspberrypi2.spec && \
   mkdir -p ~/rpmbuild/SOURCES && \
   cp -f -a ../SOURCES/* ~/rpmbuild/SOURCES/ && \
-  rpmbuild  -bp raspberrypi2.spec && \
-  pwd && \
-  ls -l ~/rpmbuild/BUILD && \
-  cd ~/rpmbuild/BUILD/linux-stable_20250916/ && \
-  patch -p1 < /tmp/mac.patch
+  cp /tmp/mac.patch ~/rpmbuild/SOURCES/ && \
+  patch -p0 < /tmp/spec.patch && \
+  rpmbuild  -ba raspberrypi2.spec
 
 RUN exit 1
 #FROM quay.io/almalinuxorg/almalinux-bootc-rpi:10

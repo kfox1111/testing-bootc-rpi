@@ -1,0 +1,18 @@
+--- raspberrypi2.spec.orig	2026-03-15 07:37:43.611357581 -0700
++++ raspberrypi2.spec	2026-03-15 07:38:22.269223217 -0700
+@@ -47,6 +47,7 @@
+ Source1:        https://github.com/raspberrypi/firmware/archive/refs/tags/%{firmware_tag}.tar.gz
+ Patch100:       config_2711.patch
+ Patch101:       config_2712.patch
++Patch102:       mac.patch
+ # Sources for kernel-tools
+ Source2000:    cpupower.service
+ Source2001:    cpupower.config
+@@ -230,6 +231,7 @@
+ %setup -q -n linux-stable_%{version_tag}
+ %patch -P 100 -p1
+ %patch -P 101 -p1
++%patch -P 102 -p1
+ perl -p -i -e "s/^EXTRAVERSION.*/EXTRAVERSION = -%{release}/" Makefile
+ perl -p -i -e "s/^CONFIG_LOCALVERSION=.*/CONFIG_LOCALVERSION=/" arch/%{Arch}/configs/bcm2711_defconfig
+ perl -p -i -e "s/^CONFIG_LOCALVERSION=.*/CONFIG_LOCALVERSION=/" arch/%{Arch}/configs/bcm2712_defconfig
