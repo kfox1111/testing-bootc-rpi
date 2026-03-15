@@ -14,7 +14,7 @@ RUN \
   cp -f -a ../SOURCES/* ~/rpmbuild/SOURCES/ && \
   rpmbuild  -bp raspberrypi2.spec && \
   pwd && \
-  ls -l ~/rpmbuild/
+  ls -l ~/rpmbuild/BUILDROOT
 
 RUN exit 1
 #FROM quay.io/almalinuxorg/almalinux-bootc-rpi:10
