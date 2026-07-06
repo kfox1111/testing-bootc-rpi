@@ -1,2 +1,4 @@
 dependencies:
   - spire-agent
+dependencyArgs:
+  spire-agent: BASE

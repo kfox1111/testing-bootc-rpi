@@ -1,4 +1,6 @@
-FROM quay.io/almalinuxorg/almalinux-bootc-rpi:10
+ARG BASE=test
+
+FROM $BASE
 
 RUN dnf install -y epel-release && \
     dnf install -y \
