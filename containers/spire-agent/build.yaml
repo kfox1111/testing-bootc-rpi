@@ -1,2 +1,4 @@
 containerFile: "../../bootc/spire-agent/Dockerfile"
 context: "../../bootc/spire-agent"
+buildArgs:
+  BASE: quay.io/almalinuxorg/almalinux-bootc-rpi:10
