@@ -1,0 +1,6 @@
+containerFile: "../../bootc/spiffe-step-ssh/Dockerfile"
+context: "../../bootc/spiffe-step-ssh"
+dependencies:
+  - spire-ha-agent
+dependencyArgs:
+  spire-ha-agent: BASE

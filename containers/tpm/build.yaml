@@ -1,0 +1,6 @@
+containerFile: "../../bootc/tpm/Dockerfile"
+context: "../../bootc/tpm"
+dependencies:
+  - spiffe-step-ssh
+dependencyArgs:
+  spiffe-step-ssh: BASE

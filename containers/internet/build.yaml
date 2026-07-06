@@ -1,4 +1,4 @@
 dependencies:
-  - spire-ha-agent
+  - tpm
 dependencyArgs:
-  spire-ha-agent: BASE
+  tpm: BASE
