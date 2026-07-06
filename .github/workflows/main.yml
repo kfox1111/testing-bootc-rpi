@@ -16,3 +16,7 @@ jobs:
     uses: kfox1111/github-workflow-container-lifecycle/.github/workflows/containers.yml@v1
     with:
       platforms: linux/arm64
+      pre-build-script: |
+        set -e
+        git clone https://github.com/spiffe/bootc.git
+        ls -l bootc/

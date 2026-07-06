@@ -15,7 +15,7 @@ RUN echo "net.ipv4.ip_forward = 1" > /etc/sysctl.d/99-nat-router.conf && \
     echo "net.ipv4.ip_nonlocal_bind = 1" >> /etc/sysctl.d/99-nat-router.conf
 
 RUN mkdir -p /etc/NetworkManager/conf.d/ && \
-    echo -e "[keyfile]\nunmanaged-devices=interface-name:eth0" > /etc/NetworkManager/conf.d/99-unmanage-wan.conf
+    echo -e "[keyfile]\nunmanaged-devices=interface-name:end0" > /etc/NetworkManager/conf.d/99-unmanage-wan.conf
 
 RUN mkdir -p /usr/libexec/dhcpcd-hooks/
 

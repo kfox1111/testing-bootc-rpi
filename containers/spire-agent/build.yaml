@@ -1,0 +1,2 @@
+containerFile: "Dockerfile"
+context: "../../bootc/spire-agent"
