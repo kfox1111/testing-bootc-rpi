@@ -1,2 +1,2 @@
-containerFile: "Dockerfile"
+containerFile: "../../bootc/spire-agent/Dockerfile"
 context: "../../bootc/spire-agent"
