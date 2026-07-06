@@ -1,0 +1,6 @@
+containerFile: "../../bootc/spire-ha-agent/Dockerfile"
+context: "../../bootc/spire-ha-agent"
+dependencies:
+  - spire-agent
+dependencyArgs:
+  spire-agent: BASE
