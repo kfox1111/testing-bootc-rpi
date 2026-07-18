@@ -1,0 +1,52 @@
+# HA NAT router keepalived configuration.
+# Template shipped in the bootc image at /usr/share/ha-router/; rendered to
+# /etc/keepalived/keepalived.conf by ha-node-setup with per-node values.
+
+global_defs {
+    router_id ha-router-node@NODE_ID@
+    # VRRPv3 allows sub-second advertisement intervals for <1s failover.
+    vrrp_version 3
+    enable_script_security
+    script_user root
+}
+
+# Demote the master if the WAN link loses carrier. The script only enforces
+# carrier while this node is master, because the backup's WAN is
+# administratively down by design.
+vrrp_script check_wan {
+    script "/usr/libexec/ha-router/check-wan.sh"
+    interval 1
+    fall 2
+    rise 2
+    # 150 - 60 = 90 < 100, so a master with a dead WAN yields to the backup.
+    weight -60
+}
+
+vrrp_instance WAN_ROUTER {
+    # Both nodes boot as BACKUP and let VRRP elect; priority decides.
+    state BACKUP
+    interface enu1u2
+    virtual_router_id 51
+    priority @PRIORITY@
+    advert_int 0.3
+
+    unicast_src_ip @LAN_IP@
+    unicast_peer {
+        @PEER_LAN_IP@
+    }
+
+    virtual_ipaddress {
+        @LAN_VIP@ dev enu1u2
+    }
+
+    track_script {
+        check_wan
+    }
+
+    # WAN identity handoff (MAC clone, lease playback, dhcpcd, conntrack
+    # commit) is orchestrated by the notify script.
+    notify_master "/usr/libexec/ha-router/notify.sh master"
+    notify_backup "/usr/libexec/ha-router/notify.sh backup"
+    notify_fault  "/usr/libexec/ha-router/notify.sh fault"
+    notify_stop   "/usr/libexec/ha-router/notify.sh stop"
+}

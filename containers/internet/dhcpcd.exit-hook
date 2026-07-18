@@ -1,0 +1,46 @@
+# HA lease-sync + WAN GARP hook. Sourced by dhcpcd on every state change.
+# Shipped in the bootc image; per-node settings come from /etc/ha-router/node.env.
+
+if [ "$interface" = "end0" ]; then
+    case "$reason" in
+    BOUND|RENEW|REBIND|REBOOT)
+        [ -r /etc/ha-router/node.env ] && . /etc/ha-router/node.env
+
+        # Capture the lease essentials for offline playback on the peer
+        # (dhcpcd -U needs a running daemon, so it can't be used during
+        # takeover). Written into /var/lib/dhcpcd/ so the rsync below
+        # carries it to the backup in the same transaction.
+        if [ -n "${new_ip_address:-}" ]; then
+            {
+                echo "ip_address=$new_ip_address"
+                echo "subnet_cidr=${new_subnet_cidr:-24}"
+                echo "routers='${new_routers:-}'"
+            } > /var/lib/dhcpcd/ha-lease.env
+        fi
+
+        # Update the ISP modem's ARP cache right after a (re)bind, so traffic
+        # flows to this node's port immediately after a takeover.
+        if [ "$reason" = "BOUND" ] || [ "$reason" = "REBOOT" ]; then
+            arping -U -c 2 -I end0 "$new_ip_address" >/dev/null 2>&1 &
+        fi
+
+        # Mirror the lease database (lease + DUID) to the peer the moment it
+        # changes. Backgrounded so dhcpcd never blocks on a dead peer. This
+        # only ever runs on the master: the backup's dhcpcd is stopped, so
+        # there is no reverse-sync/split-brain hazard.
+        if [ -n "${PEER_HB_IP:-}" ]; then
+            (
+                if rsync -a \
+                    -e "ssh -o BatchMode=yes -o ConnectTimeout=3 -o StrictHostKeyChecking=accept-new" \
+                    /var/lib/dhcpcd/ "root@${PEER_HB_IP}:/var/lib/dhcpcd/"; then
+                    logger -t dhcpcd-hook "WAN lease $reason: synced /var/lib/dhcpcd to ${PEER_HB_IP}"
+                else
+                    logger -t dhcpcd-hook "WAN lease $reason: sync to ${PEER_HB_IP} FAILED"
+                fi
+            ) &
+        else
+            logger -t dhcpcd-hook "WAN lease $reason: PEER_HB_IP unset (run ha-node-setup), skipping sync"
+        fi
+        ;;
+    esac
+fi

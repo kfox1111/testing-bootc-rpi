@@ -1,0 +1,58 @@
+# HA NAT router conntrackd configuration (FTFW state replication).
+# Template shipped in the bootc image at /usr/share/ha-router/; rendered to
+# /etc/conntrackd/conntrackd.conf by ha-node-setup with per-node values.
+
+Sync {
+    Mode FTFW {
+        # Keep the external cache and commit it to the kernel on takeover
+        # (the keepalived notify script runs conntrackd -c).
+        DisableExternalCache Off
+        ResendQueueSize 131072
+        PurgeTimeout 60
+        ACKWindowSize 300
+    }
+
+    # Unicast sync over the dedicated heartbeat link.
+    UDP {
+        IPv4_address @HB_IP@
+        IPv4_Destination_Address @PEER_HB_IP@
+        Port 3780
+        Interface enu1u1
+        SndSocketBuffer 1249280
+        RcvSocketBuffer 1249280
+        Checksum on
+    }
+}
+
+General {
+    Systemd on
+    HashSize 32768
+    HashLimit 131072
+    LogFile on
+    Syslog on
+    LockFile /var/lock/conntrack.lock
+
+    UNIX {
+        Path /var/run/conntrackd.ctl
+    }
+
+    NetlinkBufferSize 2097152
+    NetlinkBufferSizeMaxGrowth 8388608
+
+    Filter From Userspace {
+        Protocol Accept {
+            TCP
+            UDP
+            ICMP
+        }
+        # Don't replicate flows that terminate on the router itself or live
+        # on the heartbeat network; they are meaningless on the peer.
+        Address Ignore {
+            IPv4_address 127.0.0.1
+            IPv4_address @HB_IP@
+            IPv4_address @PEER_HB_IP@
+            IPv4_address @LAN_VIP_ADDR@
+            IPv4_address @LAN_IP@
+        }
+    }
+}

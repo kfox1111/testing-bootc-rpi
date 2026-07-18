@@ -1,0 +1,53 @@
+#!/usr/sbin/nft -f
+# HA NAT router ruleset. Loaded by nftables.service via an include in
+# /etc/sysconfig/nftables.conf. This is the only firewall manager on the
+# system (firewalld is masked), so start from a clean slate.
+
+flush ruleset
+
+define WAN_IF = "end0"
+define LAN_IF = "enu1u2"
+define HB_IF  = "enu1u1"
+
+table inet filter {
+    chain input {
+        type filter hook input priority filter; policy drop;
+
+        iif "lo" accept
+        ct state established,related accept
+        ct state invalid drop
+
+        # LAN clients and the HA peer (conntrackd sync, ssh/rsync lease
+        # sync, VRRP) are trusted.
+        iifname { $LAN_IF, $HB_IF } accept
+
+        # DHCP replies from the ISP arrive outside conntrack (broadcast).
+        iifname $WAN_IF udp sport 67 udp dport 68 accept
+
+        # Diagnostics.
+        icmp type echo-request limit rate 10/second accept
+        icmpv6 type { echo-request, nd-neighbor-solicit, nd-neighbor-advert,
+                      nd-router-advert, nd-router-solicit } accept
+    }
+
+    chain forward {
+        type filter hook forward priority filter; policy drop;
+
+        ct state established,related accept
+        ct state invalid drop
+
+        # LAN -> Internet; everything inbound must match an existing flow.
+        iifname $LAN_IF oifname $WAN_IF accept
+    }
+
+    chain output {
+        type filter hook output priority filter; policy accept;
+    }
+}
+
+table ip nat {
+    chain postrouting {
+        type nat hook postrouting priority srcnat; policy accept;
+        oifname $WAN_IF masquerade
+    }
+}
