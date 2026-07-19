@@ -62,3 +62,5 @@ RUN systemctl disable firewalld.service && \
     systemctl mask firewalld.service && \
     systemctl enable nftables.service keepalived.service conntrackd.service && \
     (systemctl disable dhcpcd.service 2>/dev/null || true)
+
+LABEL org.opencontainers.image.revision=1
