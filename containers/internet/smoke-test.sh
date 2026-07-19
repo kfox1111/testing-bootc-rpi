@@ -5,7 +5,9 @@
 # available in CI) and verifies, inside a privileged container:
 #   1. ha-node-setup renders valid keepalived/conntrackd configs
 #   2. the nftables ruleset loads and contains the NAT rule
-#   3. the full failover lifecycle against a real DHCP server (dnsmasq):
+#   3. SELinux stance (permissive default, scripts in the policy-blessed
+#      /usr/libexec/keepalived path) and check-wan grace-period behavior
+#   4. the full failover lifecycle against a real DHCP server (dnsmasq):
 #      cold takeover -> lease + hook capture, demote -> clean release,
 #      warm takeover -> instant offline lease playback (<1s),
 #      background dhcpcd confirmation of the same lease upstream.
@@ -54,7 +56,7 @@ wait_for() { # wait_for <seconds> <command...>
 }
 
 echo "--- environment ---"
-dnf -y -q install dnsmasq >/dev/null 2>&1 || { echo "FATAL: cannot install dnsmasq"; exit 2; }
+dnf -y -q install dnsmasq libselinux-utils >/dev/null 2>&1 || { echo "FATAL: cannot install test deps"; exit 2; }
 
 # Fake NICs matching the real hardware names, plus a veth WAN whose peer
 # hosts dnsmasq playing the role of the rate-limited ISP DHCP server.
@@ -106,10 +108,46 @@ check "include wired into /etc/sysconfig/nftables.conf" \
 # (correctly) drop server-bound DHCP. Clear the ruleset for the lifecycle test.
 nft flush ruleset
 
-echo "--- 3. failover lifecycle ---"
+echo "--- 3. SELinux stance + check-wan behavior ---"
+# The scripts keepalived executes must live in /usr/libexec/keepalived: the
+# policy labels that path keepalived_unconfined_script_exec_t so they run
+# unconfined. Anywhere else they stay confined in keepalived_t and the
+# master transition silently half-completes (found on real hardware).
+check "notify.sh in the policy-blessed unconfined path" \
+    sh -c 'matchpathcon /usr/libexec/keepalived/notify.sh | grep -q keepalived_unconfined_script_exec_t'
+check "image defaults to SELinux permissive (burn-in period)" \
+    grep -qx "SELINUX=permissive" /etc/selinux/config
+
+# check-wan: no enforcement unless master.
+mkdir -p /run/ha-router
+echo backup > /run/ha-router/state
+check "check-wan: passes on backup (WAN down by design)" \
+    /usr/libexec/keepalived/check-wan.sh
+# Fresh master transition: grace period, link still down.
+echo master > /run/ha-router/state
+check "check-wan: grace period right after takeover" \
+    /usr/libexec/keepalived/check-wan.sh
+# Settled master with the link down must fail - quietly (no EINVAL noise).
+touch -d "1 hour ago" /run/ha-router/state
+noise=$(/usr/libexec/keepalived/check-wan.sh 2>&1); rc=$?
+if [ "$rc" -ne 0 ] && [ -z "$noise" ]; then
+    ok "check-wan: settled master + WAN down fails cleanly"
+else
+    bad "check-wan: settled master + WAN down (rc=$rc, output='$noise')"
+fi
+# Settled master with the link up passes.
+ip link set end0 up
+sleep 1
+touch -d "1 hour ago" /run/ha-router/state
+check "check-wan: settled master + WAN up passes" \
+    /usr/libexec/keepalived/check-wan.sh
+ip link set end0 down
+rm -f /run/ha-router/state
+
+echo "--- 4. failover lifecycle ---"
 # 3a. Cold takeover: no synced lease yet; dhcpcd must acquire one and the
 # exit-hook must capture it for the peer.
-/usr/libexec/ha-router/notify.sh master 2>/dev/null
+/usr/libexec/keepalived/notify.sh master 2>/dev/null
 check "cold: MAC cloned" \
     sh -c 'ip link show end0 | grep -q 02:11:22:33:44:55'
 if wait_for 30 test -s /var/lib/dhcpcd/ha-lease.env; then
@@ -123,7 +161,7 @@ check "cold: address configured" \
     sh -c "ip -4 addr show dev end0 | grep -q '$LEASED_IP'"
 
 # 3b. Demotion: everything must be released without a DHCP_RELEASE.
-/usr/libexec/ha-router/notify.sh backup 2>/dev/null
+/usr/libexec/keepalived/notify.sh backup 2>/dev/null
 sleep 1
 check "demote: dhcpcd fully stopped" sh -c '! pgrep -x dhcpcd'
 check "demote: address released" \
@@ -135,7 +173,7 @@ check "demote: state file" grep -qx backup /run/ha-router/state
 # 3c. Warm takeover: the failover path. Offline lease playback must restore
 # the exact same address in well under a second, before any DHCP exchange.
 t0=$(date +%s%N)
-/usr/libexec/ha-router/notify.sh master 2>/dev/null
+/usr/libexec/keepalived/notify.sh master 2>/dev/null
 t1=$(date +%s%N)
 ms=$(( (t1 - t0) / 1000000 ))
 if [ "$ms" -lt 1000 ]; then
@@ -159,7 +197,7 @@ check "confirm: address unchanged" \
     sh -c "ip -4 addr show dev end0 | grep -q '$LEASED_IP'"
 
 # 3e. Final demotion must again leave nothing behind.
-/usr/libexec/ha-router/notify.sh backup 2>/dev/null
+/usr/libexec/keepalived/notify.sh backup 2>/dev/null
 sleep 1
 check "final demote: dhcpcd fully stopped" sh -c '! pgrep -x dhcpcd'
 check "final demote: link down" \

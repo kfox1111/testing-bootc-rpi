@@ -18,11 +18,17 @@ mkdir -p /run/ha-router
 echo "$STATE" > /run/ha-router/state
 logger -t ha-router "keepalived transition -> $STATE"
 
+# Run a command; if it fails, say so in the journal so a partial transition
+# is diagnosable with: journalctl -t ha-router
+run() {
+    "$@" || logger -t ha-router "FAILED rc=$? : $*"
+}
+
 wan_takeover() {
     # Clone the shared link-layer identity, then bring the WAN up.
-    ip link set dev "$WAN_IF" address \
+    run ip link set dev "$WAN_IF" address \
         "${WAN_MAC:?WAN_MAC not set - run ha-node-setup}"
-    ip link set dev "$WAN_IF" up
+    run ip link set dev "$WAN_IF" up
 
     # Instant lease playback: configure the rsync-synced lease without
     # waiting for (or talking to) the ISP's rate-limited DHCP server. The
@@ -30,9 +36,9 @@ wan_takeover() {
     local ip_address="" subnet_cidr="" routers=""
     [ -r /var/lib/dhcpcd/ha-lease.env ] && . /var/lib/dhcpcd/ha-lease.env
     if [ -n "$ip_address" ]; then
-        ip addr replace "${ip_address}/${subnet_cidr:-24}" dev "$WAN_IF"
+        run ip addr replace "${ip_address}/${subnet_cidr:-24}" dev "$WAN_IF"
         if [ -n "$routers" ]; then
-            ip route replace default via "${routers%% *}" dev "$WAN_IF"
+            run ip route replace default via "${routers%% *}" dev "$WAN_IF"
         fi
         arping -U -c 2 -I "$WAN_IF" "$ip_address" >/dev/null 2>&1 &
         logger -t ha-router \
@@ -45,13 +51,13 @@ wan_takeover() {
     # dhcpcd confirms the replayed lease upstream (one same-identity
     # DHCPREQUEST) and owns renewals from here; lastleaseextend keeps the
     # lease if the ISP stays silent.
-    dhcpcd -b "$WAN_IF"
+    run dhcpcd -b "$WAN_IF"
 
     # Commit the synced connection-tracking state into the kernel, flush the
     # stale internal cache, and resync (standard primary-backup sequence).
-    conntrackd -c
-    conntrackd -f
-    conntrackd -R
+    run conntrackd -c
+    run conntrackd -f
+    run conntrackd -R
 }
 
 wan_release() {
@@ -62,8 +68,8 @@ wan_release() {
     # this system, so make sure nothing survives.
     dhcpcd -x "$WAN_IF" 2>/dev/null
     pkill -x dhcpcd 2>/dev/null
-    ip addr flush dev "$WAN_IF" 2>/dev/null
-    ip link set dev "$WAN_IF" down 2>/dev/null
+    run ip addr flush dev "$WAN_IF"
+    run ip link set dev "$WAN_IF" down
 
     # Pull a fresh copy of the connection table from the new master.
     conntrackd -n 2>/dev/null

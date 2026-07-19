@@ -14,7 +14,7 @@ global_defs {
 # carrier while this node is master, because the backup's WAN is
 # administratively down by design.
 vrrp_script check_wan {
-    script "/usr/libexec/ha-router/check-wan.sh"
+    script "/usr/libexec/keepalived/check-wan.sh"
     interval 1
     fall 2
     rise 2
@@ -45,8 +45,8 @@ vrrp_instance WAN_ROUTER {
 
     # WAN identity handoff (MAC clone, lease playback, dhcpcd, conntrack
     # commit) is orchestrated by the notify script.
-    notify_master "/usr/libexec/ha-router/notify.sh master"
-    notify_backup "/usr/libexec/ha-router/notify.sh backup"
-    notify_fault  "/usr/libexec/ha-router/notify.sh fault"
-    notify_stop   "/usr/libexec/ha-router/notify.sh stop"
+    notify_master "/usr/libexec/keepalived/notify.sh master"
+    notify_backup "/usr/libexec/keepalived/notify.sh backup"
+    notify_fault  "/usr/libexec/keepalived/notify.sh fault"
+    notify_stop   "/usr/libexec/keepalived/notify.sh stop"
 }
