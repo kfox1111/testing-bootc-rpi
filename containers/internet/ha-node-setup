@@ -77,8 +77,6 @@ case "$NODE" in
     *) echo "ha-node-setup: --node must be 1 or 2" >&2; exit 1 ;;
 esac
 
-LAN_VIP_ADDR="${LAN_VIP%%/*}"
-
 if [ "$(id -u)" != 0 ]; then
     echo "ha-node-setup: must run as root" >&2
     exit 1
@@ -99,22 +97,11 @@ WAN_MAC=$WAN_MAC
 EOF
 chmod 644 /etc/ha-router/node.env
 
-render() {
-    sed -e "s|@NODE_ID@|$NODE|g" \
-        -e "s|@PRIORITY@|$PRIORITY|g" \
-        -e "s|@HB_IP@|$HB_IP|g" \
-        -e "s|@PEER_HB_IP@|$PEER_HB_IP|g" \
-        -e "s|@LAN_IP@|$LAN_IP|g" \
-        -e "s|@PEER_LAN_IP@|$PEER_LAN_IP|g" \
-        -e "s|@LAN_VIP@|$LAN_VIP|g" \
-        -e "s|@LAN_VIP_ADDR@|$LAN_VIP_ADDR|g" \
-        "$1" > "$2"
-}
-
 echo "==> Rendering keepalived and conntrackd configuration"
-mkdir -p /etc/keepalived /etc/conntrackd
-render /usr/share/ha-router/keepalived.conf.tmpl /etc/keepalived/keepalived.conf
-render /usr/share/ha-router/conntrackd.conf.tmpl /etc/conntrackd/conntrackd.conf
+# Rendering lives in ha-router-render, which also runs at every boot (via
+# ha-router-render.service) so image updates that change the templates can
+# never leave stale rendered configs behind in the machine-local /etc.
+/usr/bin/ha-router-render
 
 nm_profile() { # name interface address
     local file="/etc/NetworkManager/system-connections/$1.nmconnection"

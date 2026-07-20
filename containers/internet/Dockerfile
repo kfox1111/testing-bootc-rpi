@@ -47,11 +47,13 @@ COPY keepalived.conf.tmpl conntrackd.conf.tmpl /usr/share/ha-router/
 # they (and the dhcpcd they spawn) run unconfined. Anywhere else they stay
 # confined in keepalived_t, which cannot manage interfaces or start dhcpcd.
 COPY notify.sh check-wan.sh /usr/libexec/keepalived/
-COPY ha-node-setup /usr/bin/ha-node-setup
+COPY ha-node-setup ha-router-render /usr/bin/
+COPY ha-router-render.service /usr/lib/systemd/system/ha-router-render.service
 
 RUN chmod 0755 /usr/libexec/keepalived/notify.sh \
                /usr/libexec/keepalived/check-wan.sh \
-               /usr/bin/ha-node-setup && \
+               /usr/bin/ha-node-setup \
+               /usr/bin/ha-router-render && \
     chmod 0644 /etc/dhcpcd.exit-hook && \
     echo 'include "/etc/nftables/router.nft"' >> /etc/sysconfig/nftables.conf
 
@@ -60,7 +62,7 @@ RUN chmod 0755 /usr/libexec/keepalived/notify.sh \
 # until VRRP elects this node master.
 RUN systemctl disable firewalld.service && \
     systemctl mask firewalld.service && \
-    systemctl enable nftables.service keepalived.service conntrackd.service && \
+    systemctl enable nftables.service keepalived.service conntrackd.service \
+                     ha-router-render.service && \
     (systemctl disable dhcpcd.service 2>/dev/null || true)
 
-LABEL org.opencontainers.image.revision=1

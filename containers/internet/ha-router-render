@@ -1,0 +1,41 @@
+#!/bin/bash
+# Render the machine-local keepalived/conntrackd configs from the image's
+# templates and this node's identity (/etc/ha-router/node.env).
+#
+# Runs at every boot (ha-router-render.service) BEFORE keepalived and
+# conntrackd start, so a bootc image update that changes the templates or
+# moves script paths never leaves stale rendered configs behind in /etc
+# (node.env is the only durable per-node state). ha-node-setup calls this
+# too, right after (re)writing node.env.
+
+set -euo pipefail
+
+ENV_FILE=/etc/ha-router/node.env
+if [ ! -r "$ENV_FILE" ]; then
+    echo "ha-router-render: $ENV_FILE missing - run ha-node-setup first" >&2
+    exit 1
+fi
+. "$ENV_FILE"
+
+: "${NODE_ID:?missing in node.env}" "${PRIORITY:?missing in node.env}" \
+  "${HB_IP:?missing in node.env}"   "${PEER_HB_IP:?missing in node.env}" \
+  "${LAN_IP:?missing in node.env}"  "${PEER_LAN_IP:?missing in node.env}" \
+  "${LAN_VIP:?missing in node.env}"
+
+LAN_VIP_ADDR="${LAN_VIP%%/*}"
+
+render() {
+    sed -e "s|@NODE_ID@|$NODE_ID|g" \
+        -e "s|@PRIORITY@|$PRIORITY|g" \
+        -e "s|@HB_IP@|$HB_IP|g" \
+        -e "s|@PEER_HB_IP@|$PEER_HB_IP|g" \
+        -e "s|@LAN_IP@|$LAN_IP|g" \
+        -e "s|@PEER_LAN_IP@|$PEER_LAN_IP|g" \
+        -e "s|@LAN_VIP@|$LAN_VIP|g" \
+        -e "s|@LAN_VIP_ADDR@|$LAN_VIP_ADDR|g" \
+        "$1" > "$2"
+}
+
+mkdir -p /etc/keepalived /etc/conntrackd
+render /usr/share/ha-router/keepalived.conf.tmpl /etc/keepalived/keepalived.conf
+render /usr/share/ha-router/conntrackd.conf.tmpl /etc/conntrackd/conntrackd.conf

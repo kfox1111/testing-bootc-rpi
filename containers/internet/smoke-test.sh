@@ -90,6 +90,28 @@ if timeout 3 conntrackd -C /etc/conntrackd/conntrackd.conf -d 2>&1 \
 else
     ok "conntrackd config parses"
 fi
+check "ha-router-render.service enabled (re-render at every boot)" \
+    sh -c 'systemctl is-enabled ha-router-render.service | grep -qx enabled'
+# Every script the rendered config references must exist in the image -
+# catches template vs Dockerfile path drift.
+missing=""
+for s in $(grep -oE '"/usr/[^"]+"' /etc/keepalived/keepalived.conf \
+        | tr -d '"' | awk '{print $1}' | sort -u); do
+    [ -x "$s" ] || missing="$missing $s"
+done
+if [ -z "$missing" ]; then
+    ok "all script paths in rendered keepalived.conf exist"
+else
+    bad "rendered keepalived.conf references missing scripts:$missing"
+fi
+# Rendered configs in /etc are machine-local under bootc and go stale when
+# an image update changes the templates (bit us on real hardware). The
+# boot-time re-render must heal them.
+sed -i 's|/usr/libexec/keepalived/|/usr/libexec/stale-old-path/|g' \
+    /etc/keepalived/keepalived.conf
+ha-router-render
+check "ha-router-render heals a stale rendered config" \
+    sh -c 'grep -q "/usr/libexec/keepalived/check-wan.sh" /etc/keepalived/keepalived.conf && ! grep -q stale-old-path /etc/keepalived/keepalived.conf'
 ha-node-setup --node 1 --no-restart \
     --authorize-key "ssh-ed25519 AAAAC3TESTKEY root@peer" >/dev/null 2>&1
 ha-node-setup --node 1 --no-restart \

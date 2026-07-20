@@ -2,3 +2,4 @@ dependencies:
   - tpm
 dependencyArgs:
   tpm: BASE
+revision: "1"

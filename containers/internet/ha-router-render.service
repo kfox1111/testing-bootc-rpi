@@ -1,0 +1,13 @@
+[Unit]
+Description=Render HA router configs from the image templates
+# No-op until the node has been given an identity with ha-node-setup.
+ConditionPathExists=/etc/ha-router/node.env
+Before=keepalived.service conntrackd.service
+
+[Service]
+Type=oneshot
+RemainAfterExit=yes
+ExecStart=/usr/bin/ha-router-render
+
+[Install]
+WantedBy=multi-user.target
